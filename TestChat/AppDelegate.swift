@@ -8,9 +8,10 @@
 
 import UIKit
 import Firebase
+import FirebaseUI
 
 @UIApplicationMain
-class AppDelegate: UIResponder, UIApplicationDelegate {
+class AppDelegate: UIResponder, UIApplicationDelegate, FUIAuthDelegate {
 
     var window: UIWindow?
 
@@ -19,13 +20,60 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         // Override point for customization after application launch.
         FirebaseApp.configure()
         
+        let authUI = FUIAuth.defaultAuthUI()!
+        // You need to adopt a FUIAuthDelegate protocol to receive callback
+        authUI.delegate = self
+        
+        let providers: [FUIAuthProvider] = [
+            ]
+        authUI.providers = providers
+        
         let db = Firestore.firestore()
         let settings = db.settings
         settings.areTimestampsInSnapshotsEnabled = true
         db.settings = settings
         
+        self.window = UIWindow(frame: UIScreen.main.bounds)
+        
+        let authViewController = authUI.authViewController()
+        self.window?.rootViewController = authViewController
+        self.window?.makeKeyAndVisible()
+        
+        Auth.auth().addStateDidChangeListener { (auth, user) in
+            print("auth state did change: \(auth) \(user)")
+        }
+        
+        Auth.auth().signIn(withEmail: "niko.ahonen@ffcg.se", password: "Password1") { (result, error) in
+            print("hello")
+        }
+        
         return true
     }
+    
+    func application(_ app: UIApplication, open url: URL,
+                     options: [UIApplicationOpenURLOptionsKey : Any]) -> Bool {
+        let sourceApplication = options[UIApplicationOpenURLOptionsKey.sourceApplication] as! String?
+        if FUIAuth.defaultAuthUI()?.handleOpen(url, sourceApplication: sourceApplication) ?? false {
+            return true
+        }
+        // other URL handling goes here.
+        return false
+    }
+
+    
+    func authUI(_ authUI: FUIAuth, didSignInWith authDataResult: AuthDataResult?, error: Error?) {
+        
+        if error != nil {
+            print(error)
+            return
+        }
+        if let auth = authDataResult {
+            print("hello \(auth)")
+        }
+        
+    }
+    
+    authUI
 
     func applicationWillResignActive(_ application: UIApplication) {
         // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.
